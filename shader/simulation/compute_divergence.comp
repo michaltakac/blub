@@ -1,15 +1,9 @@
-// Computes velocity divergence of VelocityVolume
+// Computes velocity divergence of VelocityVolumeRead
 
 #version 450
 
-#include "hybrid_fluid.glsl"
-#include "per_frame_resources.glsl"
+#include "bindings_write_particles_volume.glsl"
 #include "utilities.glsl"
-
-layout(set = 2, binding = 0) uniform texture3D VelocityVolume;
-// layout(set = 2, binding = 1) uniform texture3D DivergenceVolume;
-// layout(set = 2, binding = 2) uniform texture3D PressureVolumeRead;
-layout(set = 2, binding = 3, r32f) uniform restrict image3D DivergenceVolume;
 
 COMPUTE_PASS_VOLUME
 
@@ -17,9 +11,9 @@ const ivec3 dirs[3] = ivec3[3](ivec3(1, 0, 0), ivec3(0, 1, 0), ivec3(0, 0, 1));
 
 void AddDivergenceInDir(inout float divergence, ivec3 gridCoord, uint dir) {
     // Divergence exists only from solid/fluid or fluid/fluid!
-    vec4 vneg = texelFetch(VelocityVolume, gridCoord - dirs[dir], 0);
+    vec4 vneg = texelFetch(VelocityVolumeRead, gridCoord - dirs[dir], 0);
     if (vneg.w != CELL_AIR) {
-        vec4 vpos = texelFetch(VelocityVolume, gridCoord + dirs[dir], 0);
+        vec4 vpos = texelFetch(VelocityVolumeRead, gridCoord + dirs[dir], 0);
         [[flatten]] if (vpos.w != CELL_AIR) divergence += vpos[dir] - vneg[dir];
     }
 }
@@ -30,7 +24,7 @@ void main() {
 
     // Don't compute divergence if there's no fluid
     // (Divergence tells us how much fluid is going in/out. If there's air/solid, then that's clearly zero!)
-    vec4 mid = texelFetch(VelocityVolume, gridCoord, 0);
+    vec4 mid = texelFetch(VelocityVolumeRead, gridCoord, 0);
     [[dont_flatten]] if (mid.w == CELL_FLUID) {
         AddDivergenceInDir(divergence, gridCoord, 0);
         AddDivergenceInDir(divergence, gridCoord, 1);

@@ -12,7 +12,7 @@ void main() {
     vec3 velocityGridPosition = vec3(gl_GlobalInvocationID);
     ivec3 gridCoord = ivec3(gl_GlobalInvocationID);
 
-    vec4 velocity = imageLoad(VelocityVolume, gridCoord);
+    vec4 velocity = texelFetch(VelocityVolumeRead, gridCoord, 0);
     if (velocity.w != CELL_FLUID)
         return;
 
