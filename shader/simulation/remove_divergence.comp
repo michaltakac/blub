@@ -29,24 +29,58 @@ void main() {
     else if (gridCoord.x == gridSize.x - 1)
         velocity.x = min(0.0, velocity.x);
     else {
-        velocity.x -=
-            (texelFetch(PressureVolume, gridCoord + ivec3(1, 0, 0), 0).x - texelFetch(PressureVolume, gridCoord - ivec3(1, 0, 0), 0).x) * 0.5;
+        // http://www.fem.unicamp.br/~im450/palestras&artigos/CFD%20of%20Turbulence_Chalmers_Un/chapter_6-1.pdf
+
+        // TODO: Think about how we can simplify this with hardware interpolation
+
+        float vW = texelFetch(VelocityVolumeRead, gridCoord - ivec3(1, 0, 0), 0).x;
+        float vE = texelFetch(VelocityVolumeRead, gridCoord + ivec3(1, 0, 0), 0).x;
+        float pWW = texelFetch(PressureVolume, gridCoord - ivec3(2, 0, 0), 0).x;
+        float pW = texelFetch(PressureVolume, gridCoord - ivec3(1, 0, 0), 0).x;
+        float p = texelFetch(PressureVolume, gridCoord, 0).x;
+        float pE = texelFetch(PressureVolume, gridCoord + ivec3(1, 0, 0), 0).x;
+        float pEE = texelFetch(PressureVolume, gridCoord + ivec3(2, 0, 0), 0).x;
+
+        float vWallE = 0.5 * (vE + velocity.x) + 0.25 * (pEE - 3.0 * pE + 3.0 * p - pW);
+        float vWallW = 0.5 * (vW + velocity.x) + 0.25 * (pWW - 3.0 * pW + 3.0 * p - pE);
+        velocity.x = (vWallE + vWallW) * 0.5;
+        // velocity.x = 0.5 * (vE - vW) + 0.25 * (pEE - 4.0 * pE + 6.0 * p - 4.0 * pW + pWW);
     }
     if (gridCoord.y == 0)
         velocity.y = max(0.0, velocity.y);
     else if (gridCoord.y == gridSize.y - 1)
         velocity.y = min(0.0, velocity.y);
     else {
-        velocity.y -=
-            (texelFetch(PressureVolume, gridCoord + ivec3(0, 1, 0), 0).x - texelFetch(PressureVolume, gridCoord - ivec3(0, 1, 0), 0).x) * 0.5;
+        float vW = texelFetch(VelocityVolumeRead, gridCoord - ivec3(0, 1, 0), 0).y;
+        float vE = texelFetch(VelocityVolumeRead, gridCoord + ivec3(0, 1, 0), 0).y;
+        float pWW = texelFetch(PressureVolume, gridCoord - ivec3(0, 2, 0), 0).x;
+        float pW = texelFetch(PressureVolume, gridCoord - ivec3(0, 1, 0), 0).x;
+        float p = texelFetch(PressureVolume, gridCoord, 0).x;
+        float pE = texelFetch(PressureVolume, gridCoord + ivec3(0, 1, 0), 0).x;
+        float pEE = texelFetch(PressureVolume, gridCoord + ivec3(0, 2, 0), 0).x;
+
+        float vWallE = 0.5 * (vE + velocity.y) + 0.25 * (pEE - 3.0 * pE + 3.0 * p - pW);
+        float vWallW = 0.5 * (vW + velocity.y) + 0.25 * (pWW - 3.0 * pW + 3.0 * p - pE);
+        velocity.y = (vWallE + vWallW) * 0.5;
+        // velocity.y = 0.5 * (vE - vW) + 0.25 * (pEE - 4.0 * pE + 6.0 * p - 4.0 * pW + pWW);
     }
     if (gridCoord.z == 0)
         velocity.z = max(0.0, velocity.z);
     else if (gridCoord.z == gridSize.z - 1)
         velocity.z = min(0.0, velocity.z);
     else {
-        velocity.z -=
-            (texelFetch(PressureVolume, gridCoord + ivec3(0, 0, 1), 0).x - texelFetch(PressureVolume, gridCoord - ivec3(0, 0, 1), 0).x) * 0.5;
+        float vW = texelFetch(VelocityVolumeRead, gridCoord - ivec3(0, 0, 1), 0).z;
+        float vE = texelFetch(VelocityVolumeRead, gridCoord + ivec3(0, 0, 1), 0).z;
+        float pWW = texelFetch(PressureVolume, gridCoord - ivec3(0, 0, 2), 0).x;
+        float pW = texelFetch(PressureVolume, gridCoord - ivec3(0, 0, 1), 0).x;
+        float p = texelFetch(PressureVolume, gridCoord, 0).x;
+        float pE = texelFetch(PressureVolume, gridCoord + ivec3(0, 0, 1), 0).x;
+        float pEE = texelFetch(PressureVolume, gridCoord + ivec3(0, 0, 2), 0).x;
+
+        float vWallE = 0.5 * (vE + velocity.z) + 0.25 * (pEE - 3.0 * pE + 3.0 * p - pW);
+        float vWallW = 0.5 * (vW + velocity.z) + 0.25 * (pWW - 3.0 * pW + 3.0 * p - pE);
+        velocity.z = (vWallE + vWallW) * 0.5;
+        // velocity.z = 0.5 * (vE - vW) + 0.25 * (pEE - 4.0 * pE + 6.0 * p - 4.0 * pW + pWW);
     }
 
     imageStore(VelocityVolume, gridCoord, velocity);
