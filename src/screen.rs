@@ -4,7 +4,7 @@ use crate::wgpu_utils::*;
 use futures::*;
 use pipelines::*;
 use std::collections::VecDeque;
-use std::io::Write;
+use std::convert::TryInto;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -34,22 +34,20 @@ impl PendingScreenshot {
 
             std::thread::spawn(move || {
                 let start_time = std::time::Instant::now();
-                let mut png_encoder = png::Encoder::new(std::fs::File::create(&target_path).unwrap(), resolution.width, resolution.height);
-                png_encoder.set_depth(png::BitDepth::Eight);
-                png_encoder.set_color(png::ColorType::RGBA);
-                let mut png_writer = png_encoder
-                    .write_header()
-                    .unwrap()
-                    .into_stream_writer_with_size(Screen::screenshot_buffer_bytes_per_row(resolution));
 
+                let mut imgbuf = image::ImageBuffer::new(resolution.width, resolution.height);
                 let screenshot_buffer_slice = buffer.slice(..);
                 let padded_buffer = screenshot_buffer_slice.get_mapped_range().to_vec();
-                for chunk in padded_buffer.chunks(Screen::screenshot_buffer_bytes_per_padded_row(resolution) as usize) {
-                    png_writer.write(&chunk[..Screen::screenshot_buffer_bytes_per_row(resolution)]).unwrap();
+                let padded_row_size = Screen::screenshot_buffer_bytes_per_padded_row(resolution) as usize;
+                for (image_row, buffer_chunk) in imgbuf.rows_mut().zip(padded_buffer.chunks(padded_row_size)) {
+                    for (image_pixel, buffer_pixel) in image_row.zip(buffer_chunk.chunks(4)) {
+                        *image_pixel = image::Rgb(buffer_pixel[..3].try_into().unwrap());
+                    }
                 }
+
                 buffer.unmap();
                 completion_sender_clone.send(buffer).unwrap();
-                png_writer.finish().unwrap();
+                imgbuf.save(target_path.clone()).unwrap();
 
                 info!("Wrote screenshot to {:?} (took {:?})", target_path, start_time.elapsed());
             });

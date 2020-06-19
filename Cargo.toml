@@ -23,7 +23,7 @@ regex = "1"
 shaderc = "0.6"
 wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git", rev="0e2b612c5f33862b328b179e09ae0598cdb21fae" }
 winit = "0.21" # Can't upgrade to 0.2.2 because of imgui-winit-support
-png = "0.16"
+image = { version = "0.23", default-features = false, features = ["png", "jpeg_rayon"] }
 strum_macros = "0.18"
 strum = "0.18"
 bytemuck = "1.2"
