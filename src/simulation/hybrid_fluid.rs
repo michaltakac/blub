@@ -656,7 +656,7 @@ impl HybridFluid {
                         cpass.set_bind_group(2, &self.bind_group_transfer_velocity[i], &[]);
                         wgpu_scope!(cpass, &format!("clear linked list grid{}", if i == 0 { " & marker" } else { "" }), || {
                             cpass.set_pipeline(pipeline_manager.get_compute(&self.pipeline_transfer_clear));
-                            cpass.set_push_constants(0, &[i as u32]);
+                            cpass.set_push_constants(0, bytemuck::bytes_of(&[i as u32]));
                             cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
                         });
 

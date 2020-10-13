@@ -522,7 +522,7 @@ impl PressureSolver {
             cpass.set_pipeline(pipeline_manager.get_compute(&self.pipeline_reduce));
             while num_entries_remaining > Self::DOTPRODUCT_REDUCE_REDUCTION_PER_STEP {
                 cpass.set_bind_group(2, &self.bind_group_dotproduct_reduce[source_buffer_index], &[]);
-                cpass.set_push_constants(0, &[Self::DOTPRODUCT_RESULTMODE_REDUCE, num_entries_remaining]);
+                cpass.set_push_constants(0, bytemuck::bytes_of(&[Self::DOTPRODUCT_RESULTMODE_REDUCE, num_entries_remaining]));
                 cpass.dispatch(
                     wgpu_utils::compute_group_size_1d(
                         num_entries_remaining / Self::DOTPRODUCT_READS_PER_STEP,
@@ -537,7 +537,7 @@ impl PressureSolver {
         });
         wgpu_scope!(cpass, "final", || {
             cpass.set_bind_group(2, &self.bind_group_dotproduct_final[source_buffer_index], &[]);
-            cpass.set_push_constants(0, &[result_mode, num_entries_remaining]);
+            cpass.set_push_constants(0, bytemuck::bytes_of(&[result_mode, num_entries_remaining]));
             cpass.dispatch(
                 wgpu_utils::compute_group_size_1d(num_entries_remaining, Self::COMPUTE_LOCAL_SIZE_DOTPRODUCT_REDUCE),
                 1,
@@ -583,9 +583,9 @@ impl PressureSolver {
             // Most resources are derived from particles which we initialize ourselves, but not pressure where we use the previous step to kickstart the solver
             // https://github.com/gfx-rs/wgpu/issues/563
             if pressure_field.timestamp_last_iteration == Duration::new(0, 0) {
-                cpass.set_push_constants(0, &[FIRST_STEP]);
+                cpass.set_push_constants(0, bytemuck::bytes_of(&[FIRST_STEP]));
             } else {
-                cpass.set_push_constants(0, &[NOT_FIRST_STEP]);
+                cpass.set_push_constants(0, bytemuck::bytes_of(&[NOT_FIRST_STEP]));
             }
             cpass.set_bind_group(2, &self.bind_group_init, &[]);
             cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
@@ -594,10 +594,10 @@ impl PressureSolver {
             // Note that we don't use the auxillary vector here as in-between storage!
             cpass.set_pipeline(pipeline_manager.get_compute(&self.pipeline_apply_preconditioner));
             cpass.set_push_constants(0, &[0]);
-            cpass.set_push_constants(0, &[PRECONDITIONER_PASS0]);
+            cpass.set_push_constants(0, bytemuck::bytes_of(&[PRECONDITIONER_PASS0]));
             cpass.set_bind_group(2, &self.bind_group_preconditioner[0], &[]);
             cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
-            cpass.set_push_constants(0, &[PRECONDITIONER_PASS1_SET_UNUSED_TO_ZERO]);
+            cpass.set_push_constants(0, bytemuck::bytes_of(&[PRECONDITIONER_PASS1_SET_UNUSED_TO_ZERO]));
             cpass.set_bind_group(2, &self.bind_group_preconditioner[2], &[]);
             cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
             // Init sigma to dotproduct of search vector (s) and residual (r)
@@ -619,9 +619,9 @@ impl PressureSolver {
                     const PRUPDATE_LAST_ITERATION: u32 = 1;
                     cpass.set_pipeline(pipeline_manager.get_compute(&self.pipeline_update_pressure_and_residual));
                     if i == num_iterations {
-                        cpass.set_push_constants(0, &[PRUPDATE_LAST_ITERATION]);
+                        cpass.set_push_constants(0, bytemuck::bytes_of(&[PRUPDATE_LAST_ITERATION]));
                     } else {
-                        cpass.set_push_constants(0, &[0]);
+                        cpass.set_push_constants(0, bytemuck::bytes_of(&[0]));
                     }
                     cpass.set_bind_group(2, &self.bind_group_update_pressure_and_residual, &[]);
                     cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
@@ -636,10 +636,10 @@ impl PressureSolver {
 
                 // Apply preconditioner on (r), store result to auxillary (z) and start dotproduct of <z; r>
                 cpass.set_pipeline(pipeline_manager.get_compute(&self.pipeline_apply_preconditioner));
-                cpass.set_push_constants(0, &[PRECONDITIONER_PASS0]);
+                cpass.set_push_constants(0, bytemuck::bytes_of(&[PRECONDITIONER_PASS0]));
                 cpass.set_bind_group(2, &self.bind_group_preconditioner[0], &[]);
                 cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
-                cpass.set_push_constants(0, &[PRECONDITIONER_PASS1]);
+                cpass.set_push_constants(0, bytemuck::bytes_of(&[PRECONDITIONER_PASS1]));
                 cpass.set_bind_group(2, &self.bind_group_preconditioner[1], &[]);
                 cpass.dispatch(grid_work_groups.width, grid_work_groups.height, grid_work_groups.depth);
                 // finish dotproduct of auxiliary field (z) and residual field (r)
