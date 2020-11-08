@@ -28,6 +28,7 @@ serde_json = "1.0"
 shaderc = "0.6"
 strum = "0.19"
 strum_macros = "0.19"
+tobj = "2.0.2"
 wgpu = {git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "e3eadca"}#, features = ["trace"]}
 winit = "0.22"
 
